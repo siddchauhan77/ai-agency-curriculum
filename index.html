@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agency Curriculum — Sidd Chauhan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --teal: #00d4c8;
+      --teal-dim: #00a89e;
+      --bg: #0d0d0d;
+      --card: #161616;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #888;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    .badge { font-size: 5rem; font-weight: 900; color: rgba(255,255,255,0.06); position: absolute; top: -10px; right: 12px; line-height: 1; pointer-events: none; user-select: none; }
+
+    .pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,212,200,0.12); color: var(--teal); border: 1px solid rgba(0,212,200,0.25); border-radius: 999px; padding: 3px 10px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .pill.sales { background: rgba(251,146,60,0.12); color: #fb923c; border-color: rgba(251,146,60,0.25); }
+
+    .pbar-track { background: #2a2a2a; border-radius: 999px; height: 5px; overflow: hidden; }
+    .pbar-fill { height: 100%; background: linear-gradient(90deg, var(--teal-dim), var(--teal)); border-radius: 999px; transition: width 0.4s ease; }
+    .pbar-fill.orange { background: linear-gradient(90deg, #ea580c, #fb923c); }
+
+    .module-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.2s; position: relative; }
+    .module-card:hover { border-color: #3a3a3a; }
+    .module-card.complete { border-color: rgba(0,212,200,0.3); }
+
+    .lesson-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #1f1f1f; cursor: pointer; transition: background 0.15s; }
+    .lesson-row:last-child { border-bottom: none; }
+    .lesson-row:hover { background: #1a1a1a; }
+
+    .check-box { width: 18px; height: 18px; border: 2px solid #3a3a3a; border-radius: 4px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .check-box.checked { background: var(--teal); border-color: var(--teal); }
+    .check-box svg { display: none; }
+    .check-box.checked svg { display: block; }
+
+    .notes-area { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; color: #ccc; font-size: 0.78rem; padding: 8px 10px; resize: vertical; min-height: 56px; outline: none; font-family: inherit; margin-top: 6px; transition: border-color 0.2s; }
+    .notes-area:focus { border-color: var(--teal-dim); }
+    .notes-area::placeholder { color: #444; }
+
+    .res-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--teal); text-decoration: none; background: rgba(0,212,200,0.08); border: 1px solid rgba(0,212,200,0.18); border-radius: 5px; padding: 2px 7px; transition: background 0.15s; }
+    .res-link:hover { background: rgba(0,212,200,0.16); }
+
+    .expand-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; transition: color 0.2s, transform 0.2s; }
+    .expand-btn.open { color: var(--teal); transform: rotate(180deg); }
+
+    .lesson-body { display: none; }
+    .lesson-body.open { display: block; }
+
+    .lesson-title.done { text-decoration: line-through; color: #555; }
+
+    .overall-bar .pbar-track { height: 8px; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    .reset-btn { background: none; border: 1px solid #333; color: #555; border-radius: 6px; padding: 4px 12px; font-size: 0.72rem; cursor: pointer; transition: all 0.2s; }
+    .reset-btn:hover { border-color: #dc2626; color: #dc2626; }
+  </style>
+</head>
+<body>
+
+<header class="border-b border-gray-800 sticky top-0 z-50" style="background:rgba(13,13,13,0.95);backdrop-filter:blur(8px)">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
+    <div>
+      <h1 class="text-lg font-bold text-white tracking-tight">AI Agency OS</h1>
+      <p class="text-xs" style="color:#666">0 → Selling AI Automation Services</p>
+    </div>
+    <div class="flex-1 max-w-md">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs" style="color:#888">Overall Progress</span>
+        <span id="overall-pct" class="text-xs font-semibold" style="color:var(--teal)">0%</span>
+      </div>
+      <div class="overall-bar">
+        <div class="pbar-track">
+          <div id="overall-bar" class="pbar-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <button class="reset-btn" onclick="confirmReset()">Reset All</button>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-10">
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold text-white mb-1">Your Curriculum</h2>
+    <p style="color:#666;font-size:0.85rem">8 modules · ~40 hrs total · heavy sales focus · all free resources</p>
+  </div>
+  <div id="module-grid" class="grid gap-4" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))"></div>
+</main>
+
+<script>
+const CURRICULUM = [
+  {
+    id:1, title:"Start Here", subtitle:"Foundations",
+    desc:"Understand what Claude Code is and set up your environment",
+    hours:3, tag:"core",
+    lessons:[
+      { id:"1-1", title:"What Claude Code is — and why it matters for agencies", time:"30 min",
+        resources:[{label:"Claude Code Docs",url:"https://docs.anthropic.com/en/docs/claude-code/overview"},{label:"Nick Saraev Blog",url:"https://nicksaraev.com"}] },
+      { id:"1-2", title:"Set up your environment: Claude Code CLI + VS Code", time:"45 min",
+        resources:[{label:"Getting Started Guide",url:"https://docs.anthropic.com/en/docs/claude-code/getting-started"}] },
+      { id:"1-3", title:"Build your first automation in a single session", time:"60 min",
+        resources:[{label:"Automations You Can Sell",url:"https://nicksaraev.com/5-more-automations-you-can-sell-today-for-1-500-or-10-000/"}] },
+      { id:"1-4", title:"Mental model: AI agents vs. prompts vs. workflows", time:"30 min",
+        resources:[{label:"Building Effective Agents (Anthropic)",url:"https://www.anthropic.com/research/building-effective-agents"}] }
+    ]
+  },
+  {
+    id:2, title:"The AI Partner Model", subtitle:"Business Model",
+    desc:"Pick the right niche and understand exactly what you're selling",
+    hours:4, tag:"core",
+    lessons:[
+      { id:"2-1", title:"What AI automation agencies actually do — the services menu", time:"45 min",
+        resources:[{label:"Liam Ottley YouTube",url:"https://www.youtube.com/@LiamOttley"},{label:"liamottley.com",url:"https://www.liamottley.com/"}] },
+      { id:"2-2", title:"Niche selection: pick ONE industry and go deep", time:"45 min",
+        resources:[{label:"AAA Hub Community (free)",url:"https://www.skool.com/ai-automation-agency-hub-8466"}] },
+      { id:"2-3", title:"Productized vs. retainer vs. custom project models", time:"45 min",
+        resources:[{label:"Nick Saraev Archive",url:"https://nicksaraev.com/archive/"}] },
+      { id:"2-4", title:"Reverse-engineer a real agency: what do they charge and why", time:"60 min",
+        resources:[{label:"n8n vs Make 2025 (Nick Saraev)",url:"https://nicksaraev.com/n8n-vs-make-2025/"}] }
+    ]
+  },
+  {
+    id:3, title:"Build Your Portfolio", subtitle:"Portfolio",
+    desc:"Build 5 real sellable systems — Nick Saraev + Nate Herk approved builds",
+    hours:15, tag:"core",
+    lessons:[
+      { id:"3-1", title:"Build #1 (Nick Saraev): Deep Personalization System — scrapes leads, researches each one, generates custom cold emails at scale. Sell for $1,500–$5,000.", time:"3 hrs",
+        resources:[{label:"5 Automations to Sell (Nick Saraev)",url:"https://nicksaraev.com/5-more-automations-you-can-sell-today-for-1-500-or-10-000/"},{label:"n8n vs Make — pick your tool",url:"https://nicksaraev.com/n8n-vs-make-2025/"}] },
+      { id:"3-2", title:"Build #2 (Nick Saraev): Search Intent Lead Scraper — scrapes job boards to find hiring managers + their contact info. Deliverable: Google Sheet of qualified leads. Sell for $1,500–$5,000.", time:"2 hrs",
+        resources:[{label:"Nick Saraev Blog",url:"https://nicksaraev.com/archive/"},{label:"n8n Docs",url:"https://docs.n8n.io"}] },
+      { id:"3-3", title:"Build #3 (Nick Saraev): Automated Newsletter Production System — aggregates Reddit/RSS by topic, filters via AI, outputs ready-to-send newsletter. Sell for $1,500–$10,000.", time:"2 hrs",
+        resources:[{label:"Nick Saraev – Automations",url:"https://nicksaraev.com/5-more-automations-you-can-sell-today-for-1-500-or-10-000/"}] },
+      { id:"3-4", title:"Build #4 (Nate Herk): Personalised Outreach Writer — feed a contact list, agent researches each person, generates custom messages. Nate sold this for $1,650.", time:"3 hrs",
+        resources:[{label:"Nate Herk YouTube",url:"https://www.youtube.com/@nateherk"},{label:"Nate Herk – Build & Sell n8n Agents (free 8hr course)",url:"https://www.classcentral.com/course/youtube-build-sell-n8n-ai-agents-8-hour-course-no-code-489589"}] },
+      { id:"3-5", title:"Build #5 (Nate Herk): AI Concierge / Internal Slack Assistant — lives inside a client's Slack, answers internal questions, handles bookings or onboarding. Nate sold similar builds for $6,000–$12,000.", time:"3 hrs",
+        resources:[{label:"Nate Herk – How I Sold 4 Agents for $23k",url:"https://startupseries.io/how-nate-herk-sold-ai-agents/"},{label:"nateherk.com",url:"https://www.nateherk.com/"}] },
+      { id:"3-6", title:"Package all 5 builds: GitHub repo + Loom walkthrough + 1-page case study per project", time:"2 hrs",
+        resources:[{label:"Loom (free tier)",url:"https://www.loom.com"},{label:"Justin Welsh – Case Study Framework",url:"https://www.justinwelsh.me/article/linkedin-strategy"}] }
+    ]
+  },
+  {
+    id:4, title:"How to Offer & Where to Find Clients", subtitle:"Sales · Leads",
+    desc:"Local in-person + digital — exact scripts for both channels",
+    hours:5, tag:"sales",
+    lessons:[
+      { id:"4-1", title:"LOCAL: Best niches to walk into — gyms, dentists, real estate, restaurants, med spas. They have money, pain, and no tech team.", time:"30 min",
+        resources:[{label:"Selling AI to Small Businesses Guide",url:"https://sidehustlemastery.com/make-money-selling-ai-automation-small-businesses/"},{label:"Liam Ottley – Niche Selection",url:"https://www.youtube.com/@LiamOttley"}] },
+      { id:"4-2", title:"LOCAL SCRIPT: Walk in, say: 'I build AI systems that handle [lead follow-up / bookings / reviews] automatically. Most [gyms] I work with save 5+ hrs/week. Can I show you a 10-min demo?' — get a card, follow up same day.", time:"45 min",
+        resources:[{label:"Complete Sell AI Services Guide",url:"https://mewrcreate.com/blog/how-to-sell-ai-automation-services"}] },
+      { id:"4-3", title:"DIGITAL: LinkedIn (search by job title + location), Reddit (r/entrepreneur, r/smallbusiness), Facebook Groups (local business owners). DM with the Problem → Relevance → CTA formula.", time:"60 min",
+        resources:[{label:"Justin Welsh – Find Customers on LinkedIn",url:"https://www.justinwelsh.me/newsletter/how-to-find-more-customers-on-linkedin"},{label:"Justin Welsh – Cold DM",url:"https://www.justinwelsh.me/newsletter/how-to-write-a-successful-cold-dm"}] },
+      { id:"4-4", title:"Build your 50-person outreach list (25 local, 25 digital) — use Apollo free tier for email, LinkedIn for DMs", time:"90 min",
+        resources:[{label:"Apollo.io (free tier)",url:"https://www.apollo.io"},{label:"LinkedIn Search",url:"https://www.linkedin.com"}] },
+      { id:"4-5", title:"Set up a free CRM to track every conversation — don't lose leads in DMs", time:"30 min",
+        resources:[{label:"HubSpot CRM Free",url:"https://www.hubspot.com/products/crm"},{label:"Notion CRM Template",url:"https://www.notion.so/templates/crm"}] }
+    ]
+  },
+  {
+    id:5, title:"Outreach & Cold DMs", subtitle:"Sales · Outreach",
+    desc:"Start conversations without being spammy — DM + email frameworks",
+    hours:5, tag:"sales",
+    lessons:[
+      { id:"5-1", title:"The DM formula: Problem → Relevance → CTA (no pitch first)", time:"45 min",
+        resources:[{label:"Justin Welsh – Cold DM Guide",url:"https://www.justinwelsh.me/newsletter/how-to-write-a-successful-cold-dm"},{label:"Get Replies",url:"https://www.justinwelsh.me/newsletter/how-to-get-replies-from-your-dream-customers"}] },
+      { id:"5-2", title:"LinkedIn sequence: connect → value drop → ask", time:"60 min",
+        resources:[{label:"Justin Welsh – LinkedIn Strategy",url:"https://www.justinwelsh.me/article/linkedin-strategy"}] },
+      { id:"5-3", title:"Cold email: subject lines, body, 5-touch follow-up cadence", time:"60 min",
+        resources:[{label:"Alex Berman YouTube",url:"https://www.youtube.com/@AlexBerman"},{label:"30MPC Podcast",url:"https://www.youtube.com/@30mpc"}] },
+      { id:"5-4", title:"Write your outreach templates — 3 versions, test each one", time:"90 min",
+        resources:[{label:"Justin Welsh – What's In It For Me",url:"https://www.justinwelsh.me/newsletter/whats-in-it-for-me"}] }
+    ]
+  },
+  {
+    id:6, title:"Pitch & Close", subtitle:"Sales · Closing",
+    desc:"Run discovery calls, demo your work, and handle objections",
+    hours:5, tag:"sales",
+    lessons:[
+      { id:"6-1", title:"Discovery call framework: SPIN selling for AI services", time:"60 min",
+        resources:[{label:"30MPC – Discovery Calls",url:"https://www.youtube.com/@30mpc"},{label:"SPIN Selling on YouTube",url:"https://www.youtube.com/results?search_query=SPIN+selling+summary"}] },
+      { id:"6-2", title:"Demo scripts: show the automation live, don't just describe it", time:"60 min",
+        resources:[{label:"Liam Ottley YouTube",url:"https://www.youtube.com/@LiamOttley"}] },
+      { id:"6-3", title:"Objection handling: 'too expensive', 'need to think', 'not sure'", time:"60 min",
+        resources:[{label:"Alex Hormozi YouTube",url:"https://www.youtube.com/@AlexHormozi"},{label:"30MPC – Objections",url:"https://www.youtube.com/@30mpc"}] },
+      { id:"6-4", title:"Verbal close + 1-page proposal template", time:"60 min",
+        resources:[{label:"Alex Hormozi – Closing",url:"https://www.youtube.com/@AlexHormozi"}] }
+    ]
+  },
+  {
+    id:7, title:"Pricing & Packaging", subtitle:"Sales · Offers",
+    desc:"Exact numbers to charge — starter, mid-tier, retainer, and value-based",
+    hours:4, tag:"sales",
+    lessons:[
+      { id:"7-1", title:"PRICING TIERS (memorise these): Starter build $1,500–$5,000 one-time (e.g. lead scraper, outreach writer). Mid-tier $4,000–$12,000 (e.g. Slack assistant, quoting agent). Enterprise $15,000–$50,000+. Monthly retainer: $500–$3,000/mo for maintenance + improvements.", time:"45 min",
+        resources:[{label:"AI Agency Pricing Guide 2025",url:"https://digitalagencynetwork.com/ai-agency-pricing/"},{label:"Nate Herk – $23k in 4 Agents",url:"https://startupseries.io/how-nate-herk-sold-ai-agents/"}] },
+      { id:"7-2", title:"VALUE-BASED FORMULA: Find out what the problem costs them annually → charge 20–30% of that. Example: owner spends 10hrs/week on follow-up at $75/hr = $39,000/yr cost → your automation is worth $8,000–$12,000.", time:"60 min",
+        resources:[{label:"Alex Hormozi – Pricing",url:"https://www.youtube.com/@AlexHormozi"},{label:"$100M Offers Summary",url:"https://www.youtube.com/results?search_query=100M+offers+alex+hormozi+summary"}] },
+      { id:"7-3", title:"PACKAGING: Project fee (one-time build) + monthly retainer (support + tweaks). Never do hourly. Always anchor high first — $5k project + $500/mo retainer.", time:"45 min",
+        resources:[{label:"Nick Saraev – Productizing",url:"https://nicksaraev.com/archive/"},{label:"Oreate AI – Retainer Guide",url:"https://www.oreateai.com/blog/navigating-ai-automation-agency-retainers-what-to-expect-in-2025/72deb98ad44a837b6672c4841ba2aae5"}] },
+      { id:"7-4", title:"Contracts 101 — use a 1-page agreement with: scope, deliverables, payment schedule, IP ownership. Bonsai has free templates.", time:"30 min",
+        resources:[{label:"Bonsai Free Contract Templates",url:"https://www.hellobonsai.com/free-contract-templates"}] }
+    ]
+  },
+  {
+    id:8, title:"Scale", subtitle:"Growth",
+    desc:"Turn projects into retainers, document everything, hire when ready",
+    hours:5, tag:"core",
+    lessons:[
+      { id:"8-1", title:"SOPs: write down how you do every part of your service", time:"90 min",
+        resources:[{label:"Nick Saraev Blog",url:"https://nicksaraev.com/archive/"}] },
+      { id:"8-2", title:"Project → retainer: how to pitch the ongoing engagement", time:"45 min",
+        resources:[{label:"Liam Ottley YouTube",url:"https://www.youtube.com/@LiamOttley"}] },
+      { id:"8-3", title:"When and how to subcontract (don't do it too early)", time:"45 min",
+        resources:[{label:"Liam Ottley – Scaling",url:"https://www.youtube.com/@LiamOttley"}] },
+      { id:"8-4", title:"Reverse-engineer a 6-figure AI agency — case study teardown", time:"60 min",
+        resources:[{label:"AAA Hub Community",url:"https://www.skool.com/ai-automation-agency-hub-8466"},{label:"Nick Saraev – About",url:"https://nicksaraev.com/about/"}] }
+    ]
+  }
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'aia-curriculum-v1';
+function loadState() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+function saveState(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+let state = loadState();
+
+function getLessonState(id) { return state[id] || { complete: false, notes: '' }; }
+
+// ─── Progress ─────────────────────────────────────────────────────────────────
+function totalLessons() { return CURRICULUM.reduce((a, m) => a + m.lessons.length, 0); }
+function completedLessons() { return CURRICULUM.reduce((a, m) => a + m.lessons.filter(l => getLessonState(l.id).complete).length, 0); }
+function moduleCompleted(mod) { return mod.lessons.filter(l => getLessonState(l.id).complete).length; }
+
+function updateOverallProgress() {
+  const pct = Math.round((completedLessons() / totalLessons()) * 100);
+  document.getElementById('overall-pct').textContent = pct + '%';
+  document.getElementById('overall-bar').style.width = pct + '%';
+}
+
+function updateModuleProgress(modId) {
+  const mod = CURRICULUM.find(m => m.id === modId);
+  const pct = Math.round((moduleCompleted(mod) / mod.lessons.length) * 100);
+  const bar = document.getElementById('mod-bar-' + modId);
+  const label = document.getElementById('mod-pct-' + modId);
+  const card = document.getElementById('mod-card-' + modId);
+  if (bar) bar.style.width = pct + '%';
+  if (label) label.textContent = pct + '%';
+  if (card) card.classList.toggle('complete', pct === 100);
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+function toggleLesson(lessonId, modId) {
+  const ls = getLessonState(lessonId);
+  ls.complete = !ls.complete;
+  state[lessonId] = ls;
+  saveState(state);
+  const box = document.getElementById('check-' + lessonId);
+  const title = document.getElementById('title-' + lessonId);
+  if (box) box.classList.toggle('checked', ls.complete);
+  if (title) { title.classList.toggle('done', ls.complete); title.style.color = ls.complete ? '#555' : '#ddd'; }
+  updateModuleProgress(modId);
+  updateOverallProgress();
+}
+
+function saveNotes(lessonId, value) {
+  const ls = getLessonState(lessonId);
+  ls.notes = value;
+  state[lessonId] = ls;
+  saveState(state);
+}
+
+function toggleLessonBody(lessonId) {
+  const body = document.getElementById('body-' + lessonId);
+  const btn = document.getElementById('expand-' + lessonId);
+  if (!body) return;
+  const isOpen = body.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+}
+
+function toggleModule(modId) {
+  const lessons = document.getElementById('lessons-' + modId);
+  const arrow = document.getElementById('mod-arrow-' + modId);
+  if (!lessons) return;
+  const wasOpen = lessons.style.display !== 'none';
+  lessons.style.display = wasOpen ? 'none' : 'block';
+  if (arrow) arrow.classList.toggle('open', !wasOpen);
+}
+
+function confirmReset() {
+  if (confirm('Reset all progress and notes? This cannot be undone.')) {
+    state = {};
+    saveState(state);
+    renderAll();
+  }
+}
+
+// ─── SVG helpers (no innerHTML for user data) ─────────────────────────────────
+function svgCheck() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '10'); svg.setAttribute('height', '10');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', '#0d0d0d'); svg.setAttribute('stroke-width', '3.5');
+  svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  poly.setAttribute('points', '20,6 9,17 4,12');
+  svg.appendChild(poly);
+  return svg;
+}
+
+function svgChevron(size) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', size); svg.setAttribute('height', size);
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  poly.setAttribute('points', '6,9 12,15 18,9');
+  svg.appendChild(poly);
+  return svg;
+}
+
+function svgExtLink() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '10'); svg.setAttribute('height', '10');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  poly.setAttribute('points', '15,3 21,3 21,9');
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', '10'); line.setAttribute('y1', '14'); line.setAttribute('x2', '21'); line.setAttribute('y2', '3');
+  svg.appendChild(path); svg.appendChild(poly); svg.appendChild(line);
+  return svg;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function buildLessonEl(lesson, modId) {
+  const ls = getLessonState(lesson.id);
+  const isSales = CURRICULUM.find(m => m.id === modId).tag === 'sales';
+
+  const row = document.createElement('div');
+  row.className = 'lesson-row';
+  row.addEventListener('click', () => toggleLesson(lesson.id, modId));
+
+  // Checkbox
+  const box = document.createElement('div');
+  box.className = 'check-box' + (ls.complete ? ' checked' : '');
+  box.id = 'check-' + lesson.id;
+  box.appendChild(svgCheck());
+  row.appendChild(box);
+
+  // Right side
+  const right = document.createElement('div');
+  right.className = 'flex-1 min-w-0';
+
+  // Title row
+  const titleRow = document.createElement('div');
+  titleRow.className = 'flex items-start justify-between gap-2';
+
+  const titleEl = document.createElement('p');
+  titleEl.className = 'lesson-title text-sm font-medium leading-snug' + (ls.complete ? ' done' : '');
+  titleEl.id = 'title-' + lesson.id;
+  titleEl.style.color = ls.complete ? '#555' : '#ddd';
+  titleEl.textContent = lesson.title; // textContent — safe for user-data-free lesson titles
+
+  const metaWrap = document.createElement('div');
+  metaWrap.className = 'flex items-center gap-2 flex-shrink-0';
+
+  const timeEl = document.createElement('span');
+  timeEl.style.cssText = 'color:#555;font-size:0.68rem;white-space:nowrap';
+  timeEl.textContent = lesson.time;
+
+  const expandBtn = document.createElement('button');
+  expandBtn.className = 'expand-btn';
+  expandBtn.id = 'expand-' + lesson.id;
+  expandBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLessonBody(lesson.id); });
+  expandBtn.appendChild(svgChevron('12'));
+
+  metaWrap.appendChild(timeEl);
+  metaWrap.appendChild(expandBtn);
+  titleRow.appendChild(titleEl);
+  titleRow.appendChild(metaWrap);
+  right.appendChild(titleRow);
+
+  // Expandable body
+  const body = document.createElement('div');
+  body.className = 'lesson-body';
+  body.id = 'body-' + lesson.id;
+
+  const resList = document.createElement('div');
+  resList.className = 'flex flex-wrap gap-1 mt-2';
+  lesson.resources.forEach(r => {
+    const a = document.createElement('a');
+    a.className = 'res-link';
+    a.href = r.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.addEventListener('click', (e) => e.stopPropagation());
+    a.appendChild(svgExtLink());
+    a.appendChild(document.createTextNode(r.label)); // textContent via createTextNode
+    resList.appendChild(a);
+  });
+  body.appendChild(resList);
+
+  const ta = document.createElement('textarea');
+  ta.className = 'notes-area';
+  ta.placeholder = 'Notes…';
+  ta.value = ls.notes || ''; // .value = (DOM property, not innerHTML) — safe
+  ta.addEventListener('input', (e) => { e.stopPropagation(); saveNotes(lesson.id, ta.value); });
+  ta.addEventListener('click', (e) => e.stopPropagation());
+  body.appendChild(ta);
+
+  right.appendChild(body);
+  row.appendChild(right);
+  return row;
+}
+
+function buildModuleCard(mod) {
+  const isSales = mod.tag === 'sales';
+  const done = moduleCompleted(mod);
+  const pct = Math.round((done / mod.lessons.length) * 100);
+
+  const card = document.createElement('div');
+  card.className = 'module-card' + (pct === 100 ? ' complete' : '');
+  card.id = 'mod-card-' + mod.id;
+
+  // ── Card header ──
+  const header = document.createElement('div');
+  header.className = 'p-5 cursor-pointer select-none';
+  header.style.position = 'relative';
+  header.addEventListener('click', () => toggleModule(mod.id));
+
+  // Ghost number badge
+  const badge = document.createElement('span');
+  badge.className = 'badge';
+  badge.textContent = mod.id;
+  header.appendChild(badge);
+
+  // Pill + hours row
+  const pillRow = document.createElement('div');
+  pillRow.className = 'flex items-center gap-2 mb-1';
+  const pill = document.createElement('span');
+  pill.className = 'pill' + (isSales ? ' sales' : '');
+  pill.textContent = isSales ? '🎯 Sales' : '⚙️ Core';
+  const hoursEl = document.createElement('span');
+  hoursEl.style.cssText = 'color:#555;font-size:0.7rem';
+  hoursEl.textContent = mod.hours + ' hrs';
+  pillRow.appendChild(pill); pillRow.appendChild(hoursEl);
+
+  // Title
+  const titleEl = document.createElement('h3');
+  titleEl.className = 'text-base font-bold text-white';
+  titleEl.textContent = mod.title;
+
+  // Desc
+  const descEl = document.createElement('p');
+  descEl.style.cssText = 'color:#888;font-size:0.78rem;margin-top:2px';
+  descEl.textContent = mod.desc;
+
+  // Expand arrow
+  const arrow = document.createElement('button');
+  arrow.className = 'expand-btn mt-1';
+  arrow.id = 'mod-arrow-' + mod.id;
+  arrow.style.cssText = 'position:absolute;top:20px;right:20px';
+  arrow.appendChild(svgChevron('14'));
+
+  const textCol = document.createElement('div');
+  textCol.appendChild(pillRow); textCol.appendChild(titleEl); textCol.appendChild(descEl);
+
+  const topRow = document.createElement('div');
+  topRow.className = 'flex items-start justify-between gap-3 mb-3';
+  topRow.appendChild(textCol); topRow.appendChild(arrow);
+  header.appendChild(topRow);
+
+  // Progress bar
+  const barWrap = document.createElement('div');
+  barWrap.className = 'flex items-center gap-2';
+  const track = document.createElement('div');
+  track.className = 'pbar-track flex-1';
+  const fill = document.createElement('div');
+  fill.className = 'pbar-fill' + (isSales ? ' orange' : '');
+  fill.id = 'mod-bar-' + mod.id;
+  fill.style.width = pct + '%';
+  track.appendChild(fill);
+  const pctLabel = document.createElement('span');
+  pctLabel.id = 'mod-pct-' + mod.id;
+  pctLabel.style.cssText = 'color:#666;font-size:0.7rem;width:28px;text-align:right';
+  pctLabel.textContent = pct + '%';
+  barWrap.appendChild(track); barWrap.appendChild(pctLabel);
+  header.appendChild(barWrap);
+
+  card.appendChild(header);
+
+  // ── Lessons container ──
+  const lessonsWrap = document.createElement('div');
+  lessonsWrap.id = 'lessons-' + mod.id;
+  lessonsWrap.style.cssText = 'display:none;border-top:1px solid #1f1f1f';
+  mod.lessons.forEach(lesson => lessonsWrap.appendChild(buildLessonEl(lesson, mod.id)));
+  card.appendChild(lessonsWrap);
+
+  return card;
+}
+
+function renderAll() {
+  const grid = document.getElementById('module-grid');
+  grid.textContent = ''; // clears safely without innerHTML
+  CURRICULUM.forEach(mod => grid.appendChild(buildModuleCard(mod)));
+  updateOverallProgress();
+}
+
+renderAll();
+</script>
+</body>
+</html>
